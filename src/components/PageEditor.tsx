@@ -13,6 +13,12 @@ function safeParseContent(content: string) {
   }
 }
 
+const TOOLBAR_ITEMS = [
+  { id: 'bold', label: 'Negrito', shortcut: 'Ctrl+B', render: () => <strong>B</strong>, command: 'toggleBold' },
+  { id: 'italic', label: 'Itálico', shortcut: 'Ctrl+I', render: () => <em>I</em>, command: 'toggleItalic' },
+  { id: 'strike', label: 'Tachado', shortcut: '', render: () => <s>S</s>, command: 'toggleStrike' },
+] as const
+
 interface PageEditorProps {
   content: string
   onChange: (content: string) => void
@@ -28,10 +34,8 @@ export function PageEditor({ content, onChange }: PageEditorProps) {
       }),
       Placeholder.configure({
         placeholder: ({ node }) => {
-          if (node.type.name === 'heading') {
-            return 'Título'
-          }
-          return "Digite '/' para comandos ou comece a escrever..."
+          if (node.type.name === 'heading') return 'Título da seção'
+          return 'Comece a escrever aqui...'
         },
       }),
       TaskList,
@@ -48,6 +52,7 @@ export function PageEditor({ content, onChange }: PageEditorProps) {
     editorProps: {
       attributes: {
         class: 'editor-content',
+        'aria-label': 'Conteúdo da página',
       },
     },
   })
@@ -62,49 +67,52 @@ export function PageEditor({ content, onChange }: PageEditorProps) {
 
   if (!editor) return null
 
+  const runCommand = (command: string, attrs?: Record<string, unknown>) => {
+    const chain = editor.chain().focus()
+    if (command === 'toggleHeading' && attrs?.level) {
+      chain.toggleHeading({ level: attrs.level as 1 | 2 | 3 }).run()
+      return
+    }
+    // @ts-expect-error dynamic tiptap commands
+    chain[command]().run()
+  }
+
   return (
     <div className="page-editor">
-      <div className="page-editor__toolbar">
-        <button
-          type="button"
-          className={editor.isActive('bold') ? 'active' : ''}
-          onClick={() => editor.chain().focus().toggleBold().run()}
-        >
-          <strong>B</strong>
-        </button>
-        <button
-          type="button"
-          className={editor.isActive('italic') ? 'active' : ''}
-          onClick={() => editor.chain().focus().toggleItalic().run()}
-        >
-          <em>I</em>
-        </button>
-        <button
-          type="button"
-          className={editor.isActive('strike') ? 'active' : ''}
-          onClick={() => editor.chain().focus().toggleStrike().run()}
-        >
-          <s>S</s>
-        </button>
+      <div className="page-editor__toolbar" role="toolbar" aria-label="Formatação de texto">
+        {TOOLBAR_ITEMS.map((item) => (
+          <button
+            key={item.id}
+            type="button"
+            className={editor.isActive(item.id) ? 'active' : ''}
+            title={`${item.label}${item.shortcut ? ` (${item.shortcut})` : ''}`}
+            onClick={() => runCommand(item.command)}
+          >
+            {item.render()}
+          </button>
+        ))}
         <span className="page-editor__divider" />
         <button
           type="button"
           className={editor.isActive('heading', { level: 1 }) ? 'active' : ''}
-          onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}
+          title="Título grande (H1)"
+          onClick={() => runCommand('toggleHeading', { level: 1 })}
         >
           H1
         </button>
         <button
           type="button"
           className={editor.isActive('heading', { level: 2 }) ? 'active' : ''}
-          onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
+          title="Título médio (H2)"
+          onClick={() => runCommand('toggleHeading', { level: 2 })}
         >
           H2
         </button>
         <button
           type="button"
           className={editor.isActive('heading', { level: 3 }) ? 'active' : ''}
-          onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()}
+          title="Título pequeno (H3)"
+          onClick={() => runCommand('toggleHeading', { level: 3 })}
         >
           H3
         </button>
@@ -112,21 +120,24 @@ export function PageEditor({ content, onChange }: PageEditorProps) {
         <button
           type="button"
           className={editor.isActive('bulletList') ? 'active' : ''}
-          onClick={() => editor.chain().focus().toggleBulletList().run()}
+          title="Lista com marcadores"
+          onClick={() => runCommand('toggleBulletList')}
         >
           • Lista
         </button>
         <button
           type="button"
           className={editor.isActive('orderedList') ? 'active' : ''}
-          onClick={() => editor.chain().focus().toggleOrderedList().run()}
+          title="Lista numerada"
+          onClick={() => runCommand('toggleOrderedList')}
         >
           1. Lista
         </button>
         <button
           type="button"
           className={editor.isActive('taskList') ? 'active' : ''}
-          onClick={() => editor.chain().focus().toggleTaskList().run()}
+          title="Lista de tarefas com checkbox"
+          onClick={() => runCommand('toggleTaskList')}
         >
           ☑ Tarefas
         </button>
@@ -134,18 +145,24 @@ export function PageEditor({ content, onChange }: PageEditorProps) {
         <button
           type="button"
           className={editor.isActive('blockquote') ? 'active' : ''}
-          onClick={() => editor.chain().focus().toggleBlockquote().run()}
+          title="Citação"
+          onClick={() => runCommand('toggleBlockquote')}
         >
           “ Citação
         </button>
         <button
           type="button"
           className={editor.isActive('codeBlock') ? 'active' : ''}
-          onClick={() => editor.chain().focus().toggleCodeBlock().run()}
+          title="Bloco de código"
+          onClick={() => runCommand('toggleCodeBlock')}
         >
           {'</>'}
         </button>
       </div>
+
+      {editor.isEmpty && (
+        <p className="page-editor__hint">Use a barra acima para negrito, listas, tarefas e mais</p>
+      )}
       <EditorContent editor={editor} />
     </div>
   )
