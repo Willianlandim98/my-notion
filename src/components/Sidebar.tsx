@@ -16,6 +16,7 @@ interface SidebarProps {
   onSelectPage: (id: string) => void
   onCreatePage: () => void
   onDeletePage: (id: string) => void
+  onOpenSearch: () => void
 }
 
 export function Sidebar({
@@ -26,6 +27,7 @@ export function Sidebar({
   onSelectPage,
   onCreatePage,
   onDeletePage,
+  onOpenSearch,
 }: SidebarProps) {
   return (
     <aside className={`sidebar ${collapsed ? 'sidebar--collapsed' : ''}`}>
@@ -48,10 +50,10 @@ export function Sidebar({
 
       {!collapsed && (
         <>
-          <div className="sidebar__search">
+          <button type="button" className="sidebar__search" onClick={onOpenSearch}>
             <Search size={14} />
             <span>Buscar</span>
-          </div>
+          </button>
 
           <button type="button" className="sidebar__new-page" onClick={onCreatePage}>
             <Plus size={16} />
